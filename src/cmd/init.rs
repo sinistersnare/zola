@@ -71,6 +71,8 @@ fn strip_unc(path: &Path) -> String {
     path_to_refine.trim_start_matches(LOCAL_UNC).to_string()
 }
 
+/// A CLI usable (interactive) function that will generate
+/// a project structure.
 pub fn create_new_project(name: &str, force: bool) -> Result<()> {
     let path = Path::new(name);
 
@@ -95,14 +97,7 @@ pub fn create_new_project(name: &str, force: bool) -> Result<()> {
     let highlight = ask_bool("> Do you want to enable syntax highlighting?", false)?;
     let search = ask_bool("> Do you want to build a search index of the content?", false)?;
 
-    let config = CONFIG
-        .trim_start()
-        .replace("%BASE_URL%", &base_url)
-        .replace("%COMPILE_SASS%", &format!("{}", compile_sass))
-        .replace("%SEARCH%", &format!("{}", search))
-        .replace("%HIGHLIGHT%", &format!("{}", highlight));
-
-    populate(path, compile_sass, &config)?;
+    generate_project(path, &base_url, compile_sass, highlight, search)?;
 
     println!();
     console::success(&format!(
@@ -117,11 +112,25 @@ pub fn create_new_project(name: &str, force: bool) -> Result<()> {
     Ok(())
 }
 
-fn populate(path: &Path, compile_sass: bool, config: &str) -> Result<()> {
+/// A library-usable function to generate the project files.
+pub fn generate_project(
+    path: &Path,
+    base_url: &str,
+    compile_sass: bool,
+    highlight: bool,
+    search: bool,
+) -> Result<()> {
+    let config = CONFIG
+        .trim_start()
+        .replace("%BASE_URL%", base_url)
+        .replace("%COMPILE_SASS%", &format!("{}", compile_sass))
+        .replace("%SEARCH%", &format!("{}", search))
+        .replace("%HIGHLIGHT%", &format!("{}", highlight));
+
     if !path.exists() {
         create_dir(path)?;
     }
-    create_file(&path.join("config.toml"), config)?;
+    create_file(&path.join("config.toml"), &config)?;
     create_dir(path.join("content"))?;
     create_dir(path.join("templates"))?;
     create_dir(path.join("static"))?;
@@ -198,7 +207,8 @@ mod tests {
             remove_dir_all(&dir).expect("Could not free test directory");
         }
         create_dir(&dir).expect("Could not create test directory");
-        populate(&dir, true, "").expect("Could not populate zola directories");
+        generate_project(&dir, "", true, false, false)
+            .expect("Could not populate zola directories");
 
         assert!(dir.join("config.toml").exists());
         assert!(dir.join("content").exists());
@@ -217,7 +227,8 @@ mod tests {
         if dir.exists() {
             remove_dir_all(&dir).expect("Could not free test directory");
         }
-        populate(&dir, true, "").expect("Could not populate zola directories");
+        generate_project(&dir, "", true, false, false)
+            .expect("Could not populate zola directories");
 
         assert!(dir.exists());
         assert!(dir.join("config.toml").exists());
@@ -238,7 +249,8 @@ mod tests {
             remove_dir_all(&dir).expect("Could not free test directory");
         }
         create_dir(&dir).expect("Could not create test directory");
-        populate(&dir, false, "").expect("Could not populate zola directories");
+        generate_project(&dir, "", false, false, false)
+            .expect("Could not populate zola directories");
 
         assert!(!dir.join("sass").exists());
 

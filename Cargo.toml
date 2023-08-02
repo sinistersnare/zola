@@ -16,6 +16,8 @@ include = ["src/**/*", "LICENSE", "README.md"]
 winres = "0.1"
 time = "0.3"
 
+[lib]
+
 [[bin]]
 name = "zola"
 
